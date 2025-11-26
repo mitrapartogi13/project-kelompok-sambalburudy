@@ -1,0 +1,40 @@
+/* Custom Utilities yang belum dicover Tailwind */
+
+/* Base Styles */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-track {
+    background: #FEF2F2;
+}
+::-webkit-scrollbar-thumb {
+    background: #B91C1C;
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #991b1b;
+}
+
+/* Animation Utilities */
+.fade-in-section {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    will-change: opacity, visibility;
+}
+
+.fade-in-section.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* Image Hover Zoom Hack for Performance */
+.group:hover img {
+    will-change: transform;
+}
