@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Produk - Admin Bu Rudy</title>
+    <title>Manajemen Produk - Admin Bu Rudy (Final DOM Manipulation)</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +12,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
+        // Konfigurasi Tailwind CSS
         tailwind.config = {
             theme: {
                 extend: {
@@ -32,29 +33,123 @@
             }
         }
         
-        // Fungsi JS placeholder untuk memicu modal/form
-        function openForm(mode) {
+        // Global Variables
+        let currentMode = 'create'; 
+        let currentEditingId = null; 
+        let nextProductId = 4; // Untuk simulasi ID baru: BR004, BR005, dst.
+
+        // --- FUNGSI PEMBANTU ---
+        function formatRupiah(number) {
+            return 'Rp ' + parseInt(number).toLocaleString('id-ID');
+        }
+
+        function getStatusSpan(stock) {
+            let text = 'Aktif';
+            let color = 'bg-burudy-green/20 text-burudy-green';
+            if (stock < 50) {
+                text = 'Stok Rendah';
+                color = 'bg-orange-100 text-orange-600';
+            } else if (stock == 0) {
+                text = 'Habis';
+                color = 'bg-red-100 text-red-600';
+            }
+            return `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${color}">${text}</span>`;
+        }
+
+        function createNewRow(id, name, price, stock) {
+            const formattedPrice = formatRupiah(price);
+            const statusSpan = getStatusSpan(stock);
+
+            // Membuat string HTML untuk baris baru
+            const rowHtml = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${id}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${name}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-burudy-red font-semibold">${formattedPrice}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${stock}</td>
+                <td class="px-6 py-4 whitespace-nowrap">${statusSpan}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                    <button onclick="openForm('edit', '${id}', '${name}', '${formattedPrice}', '${stock}')" class="text-indigo-600 hover:text-indigo-900 mr-4"><i class="fas fa-edit"></i> Edit</button>
+                    <button onclick="handleDelete('${id}')" class="text-burudy-red hover:text-red-900"><i class="fas fa-trash"></i> Hapus</button>
+                </td>
+            `;
+            
+            // Membuat elemen tr dan mengisinya
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-id', id);
+            tr.innerHTML = rowHtml;
+            return tr;
+        }
+
+        // --- FUNGSI CRUD LOGIC ---
+
+        function openForm(mode, productId = null, productName = null, productPrice = null, productStock = null) {
             const formTitle = document.getElementById('form-title');
             const productForm = document.getElementById('product-form');
             const modal = document.getElementById('product-modal');
+            currentMode = mode;
+            currentEditingId = productId; // Simpan ID yang sedang diedit
 
             if (mode === 'create') {
                 formTitle.innerText = 'Tambah Produk Baru';
-                productForm.reset(); // Mengosongkan form
+                productForm.reset(); 
             } else if (mode === 'edit') {
-                 formTitle.innerText = 'Edit Produk';
+                 formTitle.innerText = `Edit Produk: ${productName}`;
+                 document.getElementById('nama').value = productName;
+                 // Hapus 'Rp ' dan pemisah ribuan saat mengisi form
+                 document.getElementById('harga').value = productPrice.replace(/[^0-9]/g, ''); 
+                 document.getElementById('stok').value = productStock; 
             }
             modal.classList.remove('hidden');
         }
 
         function closeForm() {
             document.getElementById('product-modal').classList.add('hidden');
+            currentEditingId = null;
         }
 
-        function handleDelete(productName) {
-             if (confirm(`Apakah Anda yakin ingin menghapus produk "${productName}"? (Fungsi DELETE)`)) {
-                alert(`Produk ${productName} telah dihapus (Simulasi).`);
+        // FUNGSI DELETE (Diperbarui untuk memanipulasi DOM)
+        function handleDelete(productId) {
+             const row = document.querySelector(`tr[data-id="${productId}"]`);
+             const productName = row ? row.querySelector('td:nth-child(2)').innerText : 'Produk Ini';
+             
+             if (confirm(`⚠️ Apakah Anda yakin ingin menghapus produk "${productName}" (ID: ${productId})?`)) {
+                if (row) {
+                    row.remove(); // Hapus elemen <tr> dari tabel
+                    alert(`✅ Sukses: Produk "${productName}" telah dihapus.`);
+                } else {
+                    alert(`Gagal: Produk dengan ID ${productId} tidak ditemukan.`);
+                }
             }
+        }
+        
+        // FUNGSI CREATE/UPDATE (Diperbarui untuk memanipulasi DOM)
+        function handleSave() {
+            const productName = document.getElementById('nama').value;
+            const productPrice = document.getElementById('harga').value;
+            const productStock = document.getElementById('stok').value;
+            const tableBody = document.querySelector('#product-table tbody');
+            
+            if (!productName || !productPrice || !productStock) {
+                alert('Gagal: Harap isi semua kolom wajib!');
+                return;
+            }
+
+            if (currentMode === 'create') {
+                // LOGIKA CREATE
+                const newId = `BR${String(nextProductId++).padStart(3, '0')}`;
+                const newRow = createNewRow(newId, productName, productPrice, productStock);
+                tableBody.appendChild(newRow); // Tambahkan baris baru ke tabel
+                alert(`✅ Sukses: Produk baru "${productName}" telah ditambahkan.`);
+                
+            } else if (currentMode === 'edit' && currentEditingId) {
+                 // LOGIKA UPDATE
+                 const rowToUpdate = document.querySelector(`tr[data-id="${currentEditingId}"]`);
+                 if (rowToUpdate) {
+                    rowToUpdate.innerHTML = createNewRow(currentEditingId, productName, productPrice, productStock).innerHTML; // Timpa konten baris
+                    alert(`✅ Sukses: Produk "${productName}" telah diperbarui.`);
+                 }
+            }
+            closeForm();
         }
     </script>
 
@@ -87,7 +182,7 @@
             </div>
 
             <div class="bg-white p-6 rounded-xl shadow-lg overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                <table class="min-w-full divide-y divide-gray-200" id="product-table">
                     <thead class="bg-gray-50">
                         <tr>
                             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -112,55 +207,49 @@
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         
-                        <tr>
+                        <tr data-id="BR001">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">BR001</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Sambal Bawang (Tutup Kuning)</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-burudy-red font-semibold">Rp 28.000</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">450</td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-burudy-green/20 text-burudy-green">
-                                    Aktif
-                                </span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-burudy-green/20 text-burudy-green">Aktif</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                <button onclick="openForm('edit')" class="text-indigo-600 hover:text-indigo-900 mr-4"><i class="fas fa-edit"></i> Edit</button>
-                                <button onclick="handleDelete('Sambal Bawang')" class="text-burudy-red hover:text-red-900"><i class="fas fa-trash"></i> Hapus</button>
+                                <button onclick="openForm('edit', 'BR001', 'Sambal Bawang (Tutup Kuning)', 'Rp 28.000', '450')" class="text-indigo-600 hover:text-indigo-900 mr-4"><i class="fas fa-edit"></i> Edit</button>
+                                <button onclick="handleDelete('BR001')" class="text-burudy-red hover:text-red-900"><i class="fas fa-trash"></i> Hapus</button>
                             </td>
                         </tr>
 
-                        <tr>
+                        <tr data-id="BR002">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">BR002</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Udang Crispy (Toples Tabung)</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-burudy-red font-semibold">Rp 100.000</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-orange-600 font-semibold">25</td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-600">
-                                    Stok Rendah
-                                </span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-600">Stok Rendah</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                <button onclick="openForm('edit')" class="text-indigo-600 hover:text-indigo-900 mr-4"><i class="fas fa-edit"></i> Edit</button>
-                                <button onclick="handleDelete('Udang Crispy')" class="text-burudy-red hover:text-red-900"><i class="fas fa-trash"></i> Hapus</button>
+                                <button onclick="openForm('edit', 'BR002', 'Udang Crispy (Toples Tabung)', 'Rp 100.000', '25')" class="text-indigo-600 hover:text-indigo-900 mr-4"><i class="fas fa-edit"></i> Edit</button>
+                                <button onclick="handleDelete('BR002')" class="text-burudy-red hover:text-red-900"><i class="fas fa-trash"></i> Hapus</button>
                             </td>
                         </tr>
                         
-                        <tr>
+                        <tr data-id="BR003">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">BR003</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">Spikoe Tanpa Kismis</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-burudy-red font-semibold">Rp 125.000</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">320</td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-burudy-green/20 text-burudy-green">
-                                    Aktif
-                                </span>
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-burudy-green/20 text-burudy-green">Aktif</span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                                <button onclick="openForm('edit')" class="text-indigo-600 hover:text-indigo-900 mr-4"><i class="fas fa-edit"></i> Edit</button>
-                                <button onclick="handleDelete('Spikoe Tanpa Kismis')" class="text-burudy-red hover:text-red-900"><i class="fas fa-trash"></i> Hapus</button>
+                                <button onclick="openForm('edit', 'BR003', 'Spikoe Tanpa Kismis', 'Rp 125.000', '320')" class="text-indigo-600 hover:text-indigo-900 mr-4"><i class="fas fa-edit"></i> Edit</button>
+                                <button onclick="handleDelete('BR003')" class="text-burudy-red hover:text-red-900"><i class="fas fa-trash"></i> Hapus</button>
                             </td>
                         </tr>
 
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
 
@@ -191,11 +280,11 @@
                     </div>
                     <div>
                         <label for="harga" class="block text-sm font-medium text-gray-700">Harga (Rp)</label>
-                        <input type="number" name="harga" id="harga" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <input type="number" name="harga" id="harga" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" min="1000" step="1000">
                     </div>
                     <div>
                         <label for="stok" class="block text-sm font-medium text-gray-700">Jumlah Stok</label>
-                        <input type="number" name="stok" id="stok" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        <input type="number" name="stok" id="stok" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" min="0">
                     </div>
                     <div>
                         <label for="deskripsi" class="block text-sm font-medium text-gray-700">Deskripsi Singkat</label>
@@ -209,6 +298,7 @@
           <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button 
                 type="button" 
+                onclick="handleSave()"
                 class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-burudy-red text-base font-medium text-white hover:bg-red-800 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
               Simpan Data
             </button>
@@ -222,6 +312,7 @@
         </div>
       </div>
     </div>
+
     <footer class="bg-burudy-dark py-4 mt-12">
         <div class="max-w-7xl mx-auto px-4 text-center">
             <p class="text-gray-400 text-sm">&copy; 2025 Bu Rudy Admin Panel.</p>
